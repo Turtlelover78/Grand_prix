@@ -205,18 +205,18 @@ button:active {
   left: 50%;
   bottom: clamp(22px, 6vw, 44px);
   transform: translateX(-50%);
-  min-width: min(440px, 86vw);
-  padding: 10px 14px 12px;
+  min-width: min(380px, 80vw);
+  padding: 8px 11px 9px;
   text-align: center;
-  border: 3px solid #dbe9f7;
-  border-radius: 10px;
+  border: 2px solid #dbe9f7;
+  border-radius: 9px;
   background: #112740dc;
-  box-shadow: 0 8px 0 #0a1726;
+  box-shadow: 0 6px 0 #0a1726;
 }
 
 .profile-label {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
+  margin: 0 0 4px;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #ffffff;
   text-shadow: 0 1px 2px #00000099;
@@ -227,54 +227,55 @@ button:active {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .profile-name {
-  min-width: 160px;
-  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  min-width: 130px;
+  font-size: clamp(0.95rem, 2.1vw, 1.2rem);
   color: #ffffff;
   text-shadow: 0 1px 2px #00000099;
 }
 
 .profile-btn {
-  min-width: 48px;
-  padding: 5px 10px;
+  min-width: 42px;
+  padding: 4px 8px;
   border: 2px solid #132c45;
-  border-radius: 7px;
+  border-radius: 6px;
+  font-size: 0.92rem;
   color: #123;
   background: linear-gradient(180deg, #d9efff, #acd4f4);
 }
 
 .profile-edit-btn {
-  min-width: 106px;
+  min-width: 92px;
   order: 2;
   width: 100%;
-  max-width: 190px;
+  max-width: 170px;
 }
 
 .profile-editor {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .profile-input {
-  width: min(250px, 70vw);
-  padding: 7px 9px;
+  width: min(220px, 66vw);
+  padding: 6px 8px;
   border: 2px solid #dbe9f7;
   border-radius: 7px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #102335;
   background: #f4fbff;
 }
 
 .profile-action-btn {
-  min-width: 84px;
+  min-width: 76px;
 }
 
 .record-card {
@@ -385,15 +386,15 @@ button:active {
   }
 
   .profile-switcher {
-    min-width: min(360px, 92vw);
-    padding: 8px 10px 10px;
+    min-width: min(320px, 90vw);
+    padding: 7px 8px 8px;
   }
 
   .profile-name {
-    min-width: 130px;
+    min-width: 118px;
   }
 
   .profile-input {
-    width: min(240px, 78vw);
+    width: min(210px, 76vw);
   }
 }

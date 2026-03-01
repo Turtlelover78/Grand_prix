@@ -67,8 +67,8 @@ const LEVELS = [
 ];
 const LEVEL_TUNING = [
   { speedMin: 300, speedMax: 340, accelMin: 4.6, accelMax: 5.6, spawnMin: 1.22, spawnMax: 1.04 },
-  { speedMin: 340, speedMax: 405, accelMin: 5.8, accelMax: 6.8, spawnMin: 1.02, spawnMax: 0.86 },
-  { speedMin: 405, speedMax: 455, accelMin: 7.0, accelMax: 8.0, spawnMin: 0.84, spawnMax: 0.72 },
+  { speedMin: 355, speedMax: 425, accelMin: 6.3, accelMax: 7.6, spawnMin: 0.96, spawnMax: 0.78 },
+  { speedMin: 425, speedMax: 495, accelMin: 8.0, accelMax: 9.6, spawnMin: 0.76, spawnMax: 0.58 },
 ];
 const LEVEL_TOTAL_DISTANCE = LEVELS.reduce((sum, level) => sum + level.length, 0);
 const profileState = {
