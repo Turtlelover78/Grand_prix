@@ -1,0 +1,55 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grand Prix</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <h1 class="title">Grand Prix</h1>
+    <div class="canvas-wrap">
+      <canvas id="game" width="1100" height="520" aria-label="Horse jumping game"></canvas>
+      <button id="inGameMenuBtn" class="in-game-menu-btn" type="button">Main Menu</button>
+      <div id="mainMenu" class="overlay" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="menu-scene" aria-label="Main menu">
+          <button id="recordBtn" class="menu-sign menu-sign-record" type="button">Record</button>
+          <button id="playBtn" class="menu-sign menu-sign-play" type="button">Play</button>
+        </div>
+      </div>
+      <div id="recordPopup" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="record-card">
+          <h2>Record</h2>
+          <p>Hurdles Jumped: <strong id="recordHurdles">0</strong></p>
+          <p>Time Played: <strong id="recordTime">0:00</strong></p>
+          <p>Deaths: <strong id="recordDeaths">0</strong></p>
+          <button id="closeRecordBtn" type="button">Close</button>
+        </div>
+      </div>
+      <div id="shopOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="shop-panel">
+          <h2 id="shopTitle">Level Complete</h2>
+          <p id="shopCoins" class="score-line">Coins: 0</p>
+          <p id="shopMessage" class="shop-note">Choose an upgrade, then continue.</p>
+          <div class="shop-grid">
+            <button id="extraCoinsBtn" class="shop-item" type="button">X-tra Coins - 10 Coins</button>
+            <button class="shop-item" type="button" disabled>Upgrade Slot 2</button>
+            <button class="shop-item" type="button" disabled>Upgrade Slot 3</button>
+          </div>
+          <button id="continueBtn" type="button">Continue</button>
+        </div>
+      </div>
+      <div id="overlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="panel">
+          <h2>Round Over</h2>
+          <p id="finalScore" class="score-line">Score: 0</p>
+          <button id="restartBtn" type="button">Restart</button>
+        </div>
+      </div>
+    </div>
+    <p class="help">Press <kbd>Space</kbd> or <kbd>↑</kbd> to jump, or <kbd>↓</kbd> to go down faster.</p>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
