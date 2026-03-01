@@ -730,124 +730,58 @@ function drawHorseSpriteWithAspect(source, crop, x, y, bob) {
 }
 
 function initHorseSprite() {
-  horseSprite.img.src = "Horse3.png";
+  horseSprite.img.decoding = "async";
+  horseSprite.img.src = "./Horse3.png";
   horseSprite.img.onload = () => {
-    // Always have a guaranteed drawable fallback.
-    const rawCrop = {
+    const fullCrop = {
       x: 0,
       y: 0,
       w: horseSprite.img.naturalWidth || horseSprite.img.width,
       h: horseSprite.img.naturalHeight || horseSprite.img.height,
     };
 
-    let source = null;
     let crop = null;
 
     try {
-      source = removeSpriteBackground(horseSprite.img);
-      crop = findOpaqueBounds(source);
-    } catch (err) {
-      source = null;
+      crop = findSpriteBoundsByKeyColor(horseSprite.img);
+    } catch {
       crop = null;
     }
 
-    // Fallback: detect horse bounds using key-color on the raw image.
-    if (!crop) {
-      try {
-        source = horseSprite.img;
-        crop = findBoundsByKeyColor(horseSprite.img);
-      } catch (err) {
-        source = null;
-        crop = null;
-      }
-    }
-
-    if (!crop) {
-      source = horseSprite.img;
-      crop = rawCrop;
-    }
-
-    horseSprite.source = source;
-    horseSprite.crop = crop;
+    horseSprite.source = horseSprite.img;
+    horseSprite.crop = crop || fullCrop;
     horseSprite.ready = true;
   };
 
   horseSprite.img.onerror = () => {
+    console.warn("Horse sprite failed to load: ./Horse3.png");
+    horseSprite.source = null;
+    horseSprite.crop = null;
     horseSprite.ready = false;
   };
 }
 
-function removeSpriteBackground(image) {
+function findSpriteBoundsByKeyColor(image) {
+  const w = image.naturalWidth || image.width;
+  const h = image.naturalHeight || image.height;
+  if (!w || !h) return null;
+
   const off = document.createElement("canvas");
-  off.width = image.width;
-  off.height = image.height;
+  off.width = w;
+  off.height = h;
   const offCtx = off.getContext("2d", { willReadFrequently: true });
+  if (!offCtx) return null;
   offCtx.imageSmoothingEnabled = false;
-  offCtx.drawImage(image, 0, 0);
+  offCtx.drawImage(image, 0, 0, w, h);
 
-  const imgData = offCtx.getImageData(0, 0, off.width, off.height);
+  const imgData = offCtx.getImageData(0, 0, w, h);
   const data = imgData.data;
-
-  // Treat top-left pixel as background key color.
   const keyR = data[0];
   const keyG = data[1];
   const keyB = data[2];
 
-  for (let i = 0; i < data.length; i += 4) {
-    const dr = Math.abs(data[i] - keyR);
-    const dg = Math.abs(data[i + 1] - keyG);
-    const db = Math.abs(data[i + 2] - keyB);
-    if (dr + dg + db < 44) data[i + 3] = 0;
-  }
-
-  offCtx.putImageData(imgData, 0, 0);
-  return off;
-}
-
-function findOpaqueBounds(sourceCanvas) {
-  const offCtx = sourceCanvas.getContext("2d", { willReadFrequently: true });
-  const imgData = offCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
-  const data = imgData.data;
-  const w = sourceCanvas.width;
-  const h = sourceCanvas.height;
-
-  let minX = w;
-  let minY = h;
-  let maxX = -1;
-  let maxY = -1;
-
-  for (let py = 0; py < h; py += 1) {
-    for (let pxl = 0; pxl < w; pxl += 1) {
-      const idx = (py * w + pxl) * 4;
-      if (data[idx + 3] > 0) {
-        if (pxl < minX) minX = pxl;
-        if (pxl > maxX) maxX = pxl;
-        if (py < minY) minY = py;
-        if (py > maxY) maxY = py;
-      }
-    }
-  }
-
-  if (maxX < minX || maxY < minY) return null;
-  return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
-}
-
-function findBoundsByKeyColor(image) {
-  const off = document.createElement("canvas");
-  off.width = image.width;
-  off.height = image.height;
-  const offCtx = off.getContext("2d", { willReadFrequently: true });
-  offCtx.imageSmoothingEnabled = false;
-  offCtx.drawImage(image, 0, 0);
-
-  const imgData = offCtx.getImageData(0, 0, off.width, off.height);
-  const data = imgData.data;
-  const w = off.width;
-  const h = off.height;
-
-  const keyR = data[0];
-  const keyG = data[1];
-  const keyB = data[2];
+  const keyDelta = 42;
+  const alphaThreshold = 20;
 
   let minX = w;
   let minY = h;
@@ -857,10 +791,11 @@ function findBoundsByKeyColor(image) {
   for (let y = 0; y < h; y += 1) {
     for (let x = 0; x < w; x += 1) {
       const idx = (y * w + x) * 4;
+      if (data[idx + 3] <= alphaThreshold) continue;
       const dr = Math.abs(data[idx] - keyR);
       const dg = Math.abs(data[idx + 1] - keyG);
       const db = Math.abs(data[idx + 2] - keyB);
-      if (dr + dg + db >= 44) {
+      if (dr + dg + db > keyDelta) {
         if (x < minX) minX = x;
         if (x > maxX) maxX = x;
         if (y < minY) minY = y;
@@ -870,6 +805,13 @@ function findBoundsByKeyColor(image) {
   }
 
   if (maxX < minX || maxY < minY) return null;
+
+  const pad = 1;
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(w - 1, maxX + pad);
+  maxY = Math.min(h - 1, maxY + pad);
+
   return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
 }
 
