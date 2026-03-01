@@ -25,7 +25,18 @@ const completionMainMenuBtn = document.getElementById("completionMainMenuBtn");
 const profilePrevBtn = document.getElementById("profilePrevBtn");
 const profileNextBtn = document.getElementById("profileNextBtn");
 const activeProfileNameEl = document.getElementById("activeProfileName");
-const editProfileNameBtn = document.getElementById("editProfileNameBtn");
+let editProfileNameBtn = document.getElementById("editProfileNameBtn");
+if (!editProfileNameBtn) {
+  const profileControls = document.querySelector(".profile-controls");
+  if (profileControls) {
+    editProfileNameBtn = document.createElement("button");
+    editProfileNameBtn.id = "editProfileNameBtn";
+    editProfileNameBtn.className = "profile-btn profile-edit-btn";
+    editProfileNameBtn.type = "button";
+    editProfileNameBtn.textContent = "Edit Name";
+    profileControls.appendChild(editProfileNameBtn);
+  }
+}
 
 const W = canvas.width;
 const H = canvas.height;
@@ -1018,7 +1029,7 @@ inGameMenuBtn.addEventListener("click", returnToMainMenu);
 completionMainMenuBtn.addEventListener("click", returnToMainMenu);
 profilePrevBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex - 1));
 profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex + 1));
-editProfileNameBtn.addEventListener("click", editActiveProfileName);
+if (editProfileNameBtn) editProfileNameBtn.addEventListener("click", editActiveProfileName);
 recordPopup.addEventListener("click", (e) => {
   if (e.target === recordPopup) closeRecordPopup();
 });
