@@ -8,6 +8,18 @@ const restartBtn = document.getElementById("restartBtn");
 const mainMenu = document.getElementById("mainMenu");
 const playBtn = document.getElementById("playBtn");
 const recordBtn = document.getElementById("recordBtn");
+const levelSelectBtn = document.getElementById("levelSelectBtn");
+const levelSelectOverlay = document.getElementById("levelSelectOverlay");
+const closeLevelSelectBtn = document.getElementById("closeLevelSelectBtn");
+const levelStart1Btn = document.getElementById("levelStart1Btn");
+const levelStart2Btn = document.getElementById("levelStart2Btn");
+const levelStart3Btn = document.getElementById("levelStart3Btn");
+const levelLock1El = document.getElementById("levelLock1");
+const levelLock2El = document.getElementById("levelLock2");
+const levelLock3El = document.getElementById("levelLock3");
+const levelCard1 = document.getElementById("levelCard1");
+const levelCard2 = document.getElementById("levelCard2");
+const levelCard3 = document.getElementById("levelCard3");
 const recordPopup = document.getElementById("recordPopup");
 const closeRecordBtn = document.getElementById("closeRecordBtn");
 const shopOverlay = document.getElementById("shopOverlay");
@@ -52,6 +64,7 @@ const GROUND_Y = 402;
 const PIX = 4;
 const LEGACY_RECORDS_KEY = "grandPrixRecords";
 const PROFILE_RECORDS_KEY = "grandPrixRecordsByProfile";
+const PROFILE_LEVEL_PROGRESS_KEY = "grandPrixLevelProgressByProfile";
 const ACTIVE_PROFILE_KEY = "grandPrixActiveProfile";
 const PROFILE_NAMES_KEY = "grandPrixProfileNames";
 const DEFAULT_PROFILE_NAMES = ["Profile 1", "Profile 2", "Profile 3"];
@@ -83,6 +96,10 @@ const profileState = {
   activeIndex: 0,
   names: [...DEFAULT_PROFILE_NAMES],
 };
+const profileLevelProgress = {};
+const levelStartButtons = [levelStart1Btn, levelStart2Btn, levelStart3Btn];
+const levelLockLabels = [levelLock1El, levelLock2El, levelLock3El];
+const levelCards = [levelCard1, levelCard2, levelCard3];
 
 const world = {
   distance: 0,
@@ -248,12 +265,19 @@ function resetGame() {
   completionOverlay.classList.add("hidden");
 }
 
-function startGame() {
+function startGameAtLevel(levelIndex) {
+  const targetLevel = clamp(levelIndex, 0, LEVELS.length - 1);
+  if (targetLevel > getUnlockedLevelForActiveProfile()) return;
   resetGame();
-  setupLevelStart(0);
+  setupLevelStart(targetLevel);
   world.running = true;
   mainMenu.classList.add("hidden");
   recordPopup.classList.add("hidden");
+  if (levelSelectOverlay) levelSelectOverlay.classList.add("hidden");
+}
+
+function startGame() {
+  startGameAtLevel(0);
 }
 
 function getRecords() {
@@ -279,6 +303,51 @@ function getStoredProfileRecords() {
   } catch {
     return {};
   }
+}
+
+function normalizeUnlockedLevel(value) {
+  const parsed = Number.parseInt(String(value ?? 0), 10);
+  if (!Number.isFinite(parsed)) return 0;
+  return clamp(parsed, 0, LEVELS.length - 1);
+}
+
+function loadLevelProgress() {
+  let parsed = {};
+  try {
+    const raw = localStorage.getItem(PROFILE_LEVEL_PROGRESS_KEY);
+    const stored = raw ? JSON.parse(raw) : {};
+    parsed = stored && typeof stored === "object" ? stored : {};
+  } catch {
+    parsed = {};
+  }
+
+  for (let i = 0; i < PROFILE_SLOT_COUNT; i += 1) {
+    const profileId = String(i);
+    profileLevelProgress[profileId] = normalizeUnlockedLevel(parsed[profileId]);
+  }
+}
+
+function saveLevelProgress() {
+  try {
+    localStorage.setItem(PROFILE_LEVEL_PROGRESS_KEY, JSON.stringify(profileLevelProgress));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function getUnlockedLevelForActiveProfile() {
+  const profileId = String(profileState.activeIndex);
+  return normalizeUnlockedLevel(profileLevelProgress[profileId]);
+}
+
+function unlockLevelForActiveProfile(levelIndex) {
+  const unlockedTarget = normalizeUnlockedLevel(levelIndex);
+  const profileId = String(profileState.activeIndex);
+  const current = getUnlockedLevelForActiveProfile();
+  if (unlockedTarget <= current) return;
+  profileLevelProgress[profileId] = unlockedTarget;
+  saveLevelProgress();
+  renderLevelSelect();
 }
 
 function saveRecords(records) {
@@ -349,6 +418,7 @@ function setActiveProfile(index) {
   closeProfileNameEditor();
   renderActiveProfile();
   renderRecords();
+  renderLevelSelect();
 }
 
 function editActiveProfileName() {
@@ -407,6 +477,32 @@ function closeRecordPopup() {
   recordPopup.classList.add("hidden");
 }
 
+function renderLevelSelect() {
+  const unlocked = getUnlockedLevelForActiveProfile();
+  for (let i = 0; i < LEVELS.length; i += 1) {
+    const btn = levelStartButtons[i];
+    const lockLabel = levelLockLabels[i];
+    const card = levelCards[i];
+    if (!btn || !lockLabel || !card) continue;
+
+    const unlockedForThis = i <= unlocked;
+    const levelName = LEVELS[i].name;
+    btn.disabled = !unlockedForThis;
+    btn.textContent = unlockedForThis ? `Start ${levelName}` : `${levelName} Locked`;
+    lockLabel.textContent = unlockedForThis ? "Unlocked" : `Locked - complete Level ${i}`;
+    card.classList.toggle("locked", !unlockedForThis);
+  }
+}
+
+function openLevelSelect() {
+  renderLevelSelect();
+  if (levelSelectOverlay) levelSelectOverlay.classList.remove("hidden");
+}
+
+function closeLevelSelect() {
+  if (levelSelectOverlay) levelSelectOverlay.classList.add("hidden");
+}
+
 function getLevelStartDistance(index) {
   let start = 0;
   for (let i = 0; i < index; i += 1) start += LEVELS[i].length;
@@ -438,6 +534,7 @@ function setupLevelStart(levelIndex) {
 }
 
 function openShopAfterLevel(levelName, nextLevelIndex) {
+  unlockLevelForActiveProfile(nextLevelIndex);
   world.running = false;
   world.pendingLevelIndex = nextLevelIndex;
   world.obstacleTimer = 0;
@@ -537,6 +634,8 @@ function returnToMainMenu() {
   resetGame();
   mainMenu.classList.remove("hidden");
   recordPopup.classList.add("hidden");
+  closeLevelSelect();
+  renderLevelSelect();
 }
 
 function commitRunRecords() {
@@ -1454,8 +1553,10 @@ restartBtn.addEventListener("click", () => {
   world.running = true;
 });
 playBtn.addEventListener("click", startGame);
+if (levelSelectBtn) levelSelectBtn.addEventListener("click", openLevelSelect);
 recordBtn.addEventListener("click", openRecordPopup);
 closeRecordBtn.addEventListener("click", closeRecordPopup);
+if (closeLevelSelectBtn) closeLevelSelectBtn.addEventListener("click", closeLevelSelect);
 continueBtn.addEventListener("click", continueFromShop);
 extraCoinsBtn.addEventListener("click", buyExtraCoins);
 shieldBtn.addEventListener("click", buyShield);
@@ -1489,10 +1590,22 @@ if (profileNameInput) {
 recordPopup.addEventListener("click", (e) => {
   if (e.target === recordPopup) closeRecordPopup();
 });
+if (levelSelectOverlay) {
+  levelSelectOverlay.addEventListener("click", (e) => {
+    if (e.target === levelSelectOverlay) closeLevelSelect();
+  });
+}
+for (let i = 0; i < levelStartButtons.length; i += 1) {
+  const btn = levelStartButtons[i];
+  if (!btn) continue;
+  btn.addEventListener("click", () => startGameAtLevel(i));
+}
 
 profileState.names = loadProfileNames();
 profileState.activeIndex = loadActiveProfile();
+loadLevelProgress();
 renderActiveProfile();
+renderLevelSelect();
 resetGame();
 renderRecords();
 requestAnimationFrame(loop);

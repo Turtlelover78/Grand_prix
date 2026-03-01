@@ -183,6 +183,17 @@ button:active {
   letter-spacing: 0.04em;
 }
 
+.menu-sign-level {
+  left: 74.8%;
+  top: 43.2%;
+  transform: translate(-50%, -50%);
+  min-width: clamp(180px, 18vw, 240px);
+  min-height: clamp(92px, 9vw, 122px);
+  font-size: clamp(1.1rem, 2.3vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
 .menu-sign-play:hover {
   filter: brightness(1.05);
 }
@@ -191,11 +202,19 @@ button:active {
   filter: brightness(1.05);
 }
 
+.menu-sign-level:hover {
+  filter: brightness(1.05);
+}
+
 .menu-sign-play:active {
   transform: translate(-50%, -50%) translateY(1px);
 }
 
 .menu-sign-record:active {
+  transform: translate(-50%, -50%) translateY(1px);
+}
+
+.menu-sign-level:active {
   transform: translate(-50%, -50%) translateY(1px);
 }
 
@@ -324,6 +343,93 @@ button:active {
   font-weight: 700;
 }
 
+#levelSelectOverlay {
+  background: #0b1d34c9;
+}
+
+.level-select-panel {
+  width: min(840px, 92vw);
+  padding: 18px 20px 16px;
+  text-align: center;
+  border: 3px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: 0 10px 0 #8a6848;
+}
+
+.level-select-panel h2 {
+  margin: 0 0 12px;
+  font-size: clamp(1.4rem, 2.8vw, 1.9rem);
+}
+
+.level-select-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.level-card {
+  border: 2px solid #c9aa7a;
+  border-radius: 10px;
+  padding: 8px 8px 10px;
+  background: #fff4e4;
+}
+
+.level-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #2d4260;
+}
+
+.level-thumb {
+  height: 98px;
+  border: 2px solid #577694;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.level-thumb-outdoor {
+  background:
+    linear-gradient(180deg, #99d9ff 0 58%, #8fd088 58% 74%, #c79658 74% 100%),
+    repeating-linear-gradient(90deg, transparent 0 12px, #27445f 12px 14px);
+}
+
+.level-thumb-cross {
+  background:
+    radial-gradient(circle at 16% 84%, #ff8ad9 0 7px, transparent 8px),
+    radial-gradient(circle at 26% 84%, #c77dff 0 7px, transparent 8px),
+    radial-gradient(circle at 36% 84%, #f48cb0 0 7px, transparent 8px),
+    linear-gradient(180deg, #8fc9ff 0 56%, #84c67a 56% 74%, #8d653d 74% 100%);
+}
+
+.level-thumb-indoor {
+  background:
+    linear-gradient(180deg, #475267 0 56%, #7a674f 56% 70%, #c9a06a 70% 100%),
+    repeating-linear-gradient(90deg, transparent 0 9px, #7b5b3e 9px 11px);
+}
+
+.level-lock {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #245478;
+}
+
+.level-start-btn {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.92rem;
+}
+
+.level-card.locked {
+  opacity: 0.82;
+}
+
+.level-card.locked .level-lock {
+  color: #8a2f2f;
+}
+
 #closeRecordBtn {
   margin-top: 14px;
 }
@@ -399,6 +505,13 @@ button:active {
     transform: translate(-50%, -50%);
   }
 
+  .menu-sign-level {
+    left: 74.8%;
+    top: 43.2%;
+    min-width: min(220px, 36vw);
+    transform: translate(-50%, -50%);
+  }
+
   .profile-switcher {
     min-width: min(320px, 90vw);
     padding: 7px 8px 8px;
@@ -410,5 +523,13 @@ button:active {
 
   .profile-input {
     width: min(210px, 76vw);
+  }
+
+  .level-select-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .level-thumb {
+    height: 88px;
   }
 }

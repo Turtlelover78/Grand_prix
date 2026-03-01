@@ -16,6 +16,7 @@
         <div class="menu-scene" aria-label="Main menu">
           <button id="recordBtn" class="menu-sign menu-sign-record" type="button">Record</button>
           <button id="playBtn" class="menu-sign menu-sign-play" type="button">Play</button>
+          <button id="levelSelectBtn" class="menu-sign menu-sign-level" type="button">Level Select</button>
           <div class="profile-switcher" aria-label="Profile selector">
             <button id="closeProfileSwitcherBtn" class="profile-close-btn" type="button" aria-label="Close profile panel">X</button>
             <p class="profile-label">Profile</p>
@@ -48,6 +49,32 @@
           <p>Time Played: <strong id="recordTime">0:00</strong></p>
           <p>Deaths: <strong id="recordDeaths">0</strong></p>
           <button id="closeRecordBtn" type="button">Close</button>
+        </div>
+      </div>
+      <div id="levelSelectOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="level-select-panel">
+          <h2>Select Level</h2>
+          <div class="level-select-grid">
+            <article id="levelCard1" class="level-card">
+              <h3>Level 1</h3>
+              <div class="level-thumb level-thumb-outdoor" aria-hidden="true"></div>
+              <p id="levelLock1" class="level-lock">Unlocked</p>
+              <button id="levelStart1Btn" class="level-start-btn" data-level="0" type="button">Start Easy</button>
+            </article>
+            <article id="levelCard2" class="level-card">
+              <h3>Level 2</h3>
+              <div class="level-thumb level-thumb-cross" aria-hidden="true"></div>
+              <p id="levelLock2" class="level-lock">Locked</p>
+              <button id="levelStart2Btn" class="level-start-btn" data-level="1" type="button">Start Cross Country</button>
+            </article>
+            <article id="levelCard3" class="level-card">
+              <h3>Level Three</h3>
+              <div class="level-thumb level-thumb-indoor" aria-hidden="true"></div>
+              <p id="levelLock3" class="level-lock">Locked</p>
+              <button id="levelStart3Btn" class="level-start-btn" data-level="2" type="button">Start Indoor Arena</button>
+            </article>
+          </div>
+          <button id="closeLevelSelectBtn" type="button">Close</button>
         </div>
       </div>
       <div id="shopOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
