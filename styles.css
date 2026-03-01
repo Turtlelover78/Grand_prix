@@ -253,6 +253,30 @@ button:active {
   max-width: 190px;
 }
 
+.profile-editor {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-input {
+  width: min(250px, 70vw);
+  padding: 7px 9px;
+  border: 2px solid #dbe9f7;
+  border-radius: 7px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #102335;
+  background: #f4fbff;
+}
+
+.profile-action-btn {
+  min-width: 84px;
+}
+
 .record-card {
   width: min(760px, 90vw);
   min-height: min(430px, 76vh);
@@ -367,5 +391,9 @@ button:active {
 
   .profile-name {
     min-width: 130px;
+  }
+
+  .profile-input {
+    width: min(240px, 78vw);
   }
 }

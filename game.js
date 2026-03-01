@@ -25,6 +25,10 @@ const completionMainMenuBtn = document.getElementById("completionMainMenuBtn");
 const profilePrevBtn = document.getElementById("profilePrevBtn");
 const profileNextBtn = document.getElementById("profileNextBtn");
 const activeProfileNameEl = document.getElementById("activeProfileName");
+const profileNameEditor = document.getElementById("profileNameEditor");
+const profileNameInput = document.getElementById("profileNameInput");
+const saveProfileNameBtn = document.getElementById("saveProfileNameBtn");
+const cancelProfileNameBtn = document.getElementById("cancelProfileNameBtn");
 let editProfileNameBtn = document.getElementById("editProfileNameBtn");
 if (!editProfileNameBtn) {
   const profileControls = document.querySelector(".profile-controls");
@@ -292,18 +296,32 @@ function setActiveProfile(index) {
   } catch {
     // Ignore storage failures.
   }
+  closeProfileNameEditor();
   renderActiveProfile();
   renderRecords();
 }
 
 function editActiveProfileName() {
+  if (!profileNameEditor || !profileNameInput) return;
   const i = profileState.activeIndex;
-  const currentName = profileState.names[i];
-  const entered = window.prompt("Enter profile name (max 18 characters):", currentName);
-  if (entered == null) return;
-  profileState.names[i] = normalizeProfileName(entered, DEFAULT_PROFILE_NAMES[i]);
+  profileNameInput.value = profileState.names[i] || DEFAULT_PROFILE_NAMES[i];
+  profileNameEditor.classList.remove("hidden");
+  profileNameInput.focus();
+  profileNameInput.select();
+}
+
+function closeProfileNameEditor() {
+  if (!profileNameEditor) return;
+  profileNameEditor.classList.add("hidden");
+}
+
+function saveActiveProfileName() {
+  if (!profileNameInput) return;
+  const i = profileState.activeIndex;
+  profileState.names[i] = normalizeProfileName(profileNameInput.value, DEFAULT_PROFILE_NAMES[i]);
   saveProfileNames(profileState.names);
   renderActiveProfile();
+  closeProfileNameEditor();
 }
 
 function formatDuration(totalSeconds) {
@@ -1030,6 +1048,20 @@ completionMainMenuBtn.addEventListener("click", returnToMainMenu);
 profilePrevBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex - 1));
 profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex + 1));
 if (editProfileNameBtn) editProfileNameBtn.addEventListener("click", editActiveProfileName);
+if (saveProfileNameBtn) saveProfileNameBtn.addEventListener("click", saveActiveProfileName);
+if (cancelProfileNameBtn) cancelProfileNameBtn.addEventListener("click", closeProfileNameEditor);
+if (profileNameInput) {
+  profileNameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveActiveProfileName();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeProfileNameEditor();
+    }
+  });
+}
 recordPopup.addEventListener("click", (e) => {
   if (e.target === recordPopup) closeRecordPopup();
 });
