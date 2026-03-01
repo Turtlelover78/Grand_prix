@@ -339,7 +339,10 @@ function saveActiveProfileName() {
 
 function closeProfileSwitcher() {
   closeProfileNameEditor();
-  if (profileSwitcher) profileSwitcher.classList.add("hidden");
+  if (!profileSwitcher) return;
+  profileSwitcher.classList.add("hidden");
+  profileSwitcher.style.display = "none";
+  profileSwitcher.setAttribute("aria-hidden", "true");
 }
 
 function formatDuration(totalSeconds) {
@@ -1132,7 +1135,13 @@ profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.act
 if (editProfileNameBtn) editProfileNameBtn.addEventListener("click", editActiveProfileName);
 if (saveProfileNameBtn) saveProfileNameBtn.addEventListener("click", saveActiveProfileName);
 if (cancelProfileNameBtn) cancelProfileNameBtn.addEventListener("click", closeProfileNameEditor);
-if (closeProfileSwitcherBtn) closeProfileSwitcherBtn.addEventListener("click", closeProfileSwitcher);
+if (closeProfileSwitcherBtn) {
+  closeProfileSwitcherBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeProfileSwitcher();
+  });
+}
 if (profileNameInput) {
   profileNameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {

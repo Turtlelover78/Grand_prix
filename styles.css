@@ -76,6 +76,10 @@ kbd {
   display: none;
 }
 
+.profile-switcher.hidden {
+  display: none !important;
+}
+
 #mainMenu {
   background: #0b1d34d4;
 }
