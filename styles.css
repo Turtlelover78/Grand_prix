@@ -208,18 +208,29 @@ button:active {
   min-width: min(380px, 80vw);
   padding: 8px 11px 9px;
   text-align: center;
-  border: 2px solid #dbe9f7;
+  border: 2px solid #274666;
   border-radius: 9px;
-  background: #112740dc;
+  background: linear-gradient(180deg, #d9efff, #acd4f4);
   box-shadow: 0 6px 0 #0a1726;
+}
+
+.profile-close-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 26px;
+  padding: 1px 0;
+  border: 1px solid #132c45;
+  border-radius: 5px;
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 .profile-label {
   margin: 0 0 4px;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 2px #00000099;
+  color: #123;
 }
 
 .profile-controls {
@@ -233,8 +244,7 @@ button:active {
 .profile-name {
   min-width: 130px;
   font-size: clamp(0.95rem, 2.1vw, 1.2rem);
-  color: #ffffff;
-  text-shadow: 0 1px 2px #00000099;
+  color: #123;
 }
 
 .profile-btn {

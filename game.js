@@ -15,6 +15,8 @@ const shopTitleEl = document.getElementById("shopTitle");
 const shopCoinsEl = document.getElementById("shopCoins");
 const continueBtn = document.getElementById("continueBtn");
 const extraCoinsBtn = document.getElementById("extraCoinsBtn");
+const shieldBtn = document.getElementById("shieldBtn");
+const secondJumpBtn = document.getElementById("secondJumpBtn");
 const shopMessageEl = document.getElementById("shopMessage");
 const inGameMenuBtn = document.getElementById("inGameMenuBtn");
 const recordHurdlesEl = document.getElementById("recordHurdles");
@@ -22,6 +24,8 @@ const recordTimeEl = document.getElementById("recordTime");
 const recordDeathsEl = document.getElementById("recordDeaths");
 const completionOverlay = document.getElementById("completionOverlay");
 const completionMainMenuBtn = document.getElementById("completionMainMenuBtn");
+const profileSwitcher = document.querySelector(".profile-switcher");
+const closeProfileSwitcherBtn = document.getElementById("closeProfileSwitcherBtn");
 const profilePrevBtn = document.getElementById("profilePrevBtn");
 const profileNextBtn = document.getElementById("profileNextBtn");
 const activeProfileNameEl = document.getElementById("activeProfileName");
@@ -56,18 +60,21 @@ const START_SPEED = 245;
 const COIN_VALUE = 2;
 const UPGRADED_COIN_VALUE = 3;
 const EXTRA_COINS_COST = 10;
-const COIN_SPAWN_CHANCE = 0.24;
-const LEVEL_END_CLEAR_ZONE = 450;
-const LEVEL_END_NO_SPAWN_BUFFER = 950;
+const SHIELD_COST = 10;
+const SECOND_JUMP_COST = 10;
+const SECOND_JUMP_COOLDOWN = 2.6;
+const COIN_SPAWN_CHANCE = 0.32;
+const LEVEL_END_CLEAR_ZONE = 320;
+const LEVEL_END_NO_SPAWN_BUFFER = 420;
 const LEVEL_START_FENCE_X = 800;
 const LEVELS = [
-  { name: "Easy", length: 5000 },
-  { name: "Medium", length: 5000 },
-  { name: "Hard", length: 5000 },
+  { name: "Easy", length: 6500 },
+  { name: "Medium", length: 6500 },
+  { name: "Hard", length: 6500 },
 ];
 const LEVEL_TUNING = [
   { speedMin: 300, speedMax: 340, accelMin: 4.6, accelMax: 5.6, spawnMin: 1.22, spawnMax: 1.04 },
-  { speedMin: 355, speedMax: 425, accelMin: 6.3, accelMax: 7.6, spawnMin: 0.96, spawnMax: 0.78 },
+  { speedMin: 370, speedMax: 440, accelMin: 6.8, accelMax: 8.2, spawnMin: 0.9, spawnMax: 0.72 },
   { speedMin: 425, speedMax: 495, accelMin: 8.0, accelMax: 9.6, spawnMin: 0.76, spawnMax: 0.58 },
 ];
 const LEVEL_TOTAL_DISTANCE = LEVELS.reduce((sum, level) => sum + level.length, 0);
@@ -92,6 +99,9 @@ const world = {
   totalProgress: 0,
   coins: 0,
   extraCoinsPurchased: false,
+  shieldCharges: 0,
+  secondJumpPurchased: false,
+  secondJumpCooldown: 0,
   levelCoinCount: 0,
   levelFenceCount: 0,
   pendingLevelIndex: null,
@@ -179,6 +189,9 @@ function resetGame() {
   world.totalProgress = 0;
   world.coins = 0;
   world.extraCoinsPurchased = false;
+  world.shieldCharges = 0;
+  world.secondJumpPurchased = false;
+  world.secondJumpCooldown = 0;
   world.levelCoinCount = 0;
   world.levelFenceCount = 0;
   world.pendingLevelIndex = null;
@@ -324,6 +337,11 @@ function saveActiveProfileName() {
   closeProfileNameEditor();
 }
 
+function closeProfileSwitcher() {
+  closeProfileNameEditor();
+  if (profileSwitcher) profileSwitcher.classList.add("hidden");
+}
+
 function formatDuration(totalSeconds) {
   const safe = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(safe / 3600);
@@ -415,10 +433,21 @@ function updateShopUi() {
   if (world.extraCoinsPurchased) {
     extraCoinsBtn.disabled = true;
     extraCoinsBtn.textContent = "X-tra Coins (Owned)";
-    return;
+  } else {
+    extraCoinsBtn.disabled = false;
+    extraCoinsBtn.textContent = `X-tra Coins - ${EXTRA_COINS_COST} Coins`;
   }
-  extraCoinsBtn.disabled = false;
-  extraCoinsBtn.textContent = `X-tra Coins - ${EXTRA_COINS_COST} Coins`;
+  shieldBtn.disabled = false;
+  shieldBtn.textContent = world.shieldCharges > 0
+    ? `Shield - ${SHIELD_COST} Coins (x${world.shieldCharges})`
+    : `Shield - ${SHIELD_COST} Coins`;
+  if (world.secondJumpPurchased) {
+    secondJumpBtn.disabled = true;
+    secondJumpBtn.textContent = "Second Jump (Owned)";
+  } else {
+    secondJumpBtn.disabled = false;
+    secondJumpBtn.textContent = `Second Jump - ${SECOND_JUMP_COST} Coins`;
+  }
 }
 
 function buyExtraCoins() {
@@ -434,6 +463,33 @@ function buyExtraCoins() {
   world.extraCoinsPurchased = true;
   updateShopUi();
   shopMessageEl.textContent = "Gain 3 coins per coin.";
+}
+
+function buyShield() {
+  if (world.coins < SHIELD_COST) {
+    shopMessageEl.textContent = `Need ${SHIELD_COST} coins.`;
+    return;
+  }
+  world.coins -= SHIELD_COST;
+  world.shieldCharges += 1;
+  updateShopUi();
+  shopMessageEl.textContent = `Shield ready. Charges: ${world.shieldCharges}.`;
+}
+
+function buySecondJump() {
+  if (world.secondJumpPurchased) {
+    shopMessageEl.textContent = "Second Jump already purchased this game.";
+    return;
+  }
+  if (world.coins < SECOND_JUMP_COST) {
+    shopMessageEl.textContent = `Need ${SECOND_JUMP_COST} coins.`;
+    return;
+  }
+  world.coins -= SECOND_JUMP_COST;
+  world.secondJumpPurchased = true;
+  world.secondJumpCooldown = 0;
+  updateShopUi();
+  shopMessageEl.textContent = "Second Jump unlocked. It has a cooldown.";
 }
 
 function returnToMainMenu() {
@@ -535,6 +591,11 @@ function jump() {
   if (horse.grounded) {
     horse.vy = -horse.jumpPower;
     horse.grounded = false;
+    return;
+  }
+  if (world.secondJumpPurchased && world.secondJumpCooldown <= 0) {
+    horse.vy = -horse.jumpPower * 0.95;
+    world.secondJumpCooldown = SECOND_JUMP_COOLDOWN;
   }
 }
 
@@ -546,6 +607,9 @@ function update(dt) {
   if (!world.running) return;
 
   sessionTimeSec += dt;
+  if (world.secondJumpCooldown > 0) {
+    world.secondJumpCooldown = Math.max(0, world.secondJumpCooldown - dt);
+  }
   const activeLevelIndex = world.levelIndex;
   const activeLevelEnd = getLevelEndDistance(activeLevelIndex);
   const hasNextLevel = activeLevelIndex < LEVELS.length - 1;
@@ -587,7 +651,7 @@ function update(dt) {
     horse.grounded = true;
   }
 
-  const inNoSpawnZone = hasNextLevel && world.distance >= noSpawnStartDistance;
+  const inNoSpawnZone = world.distance >= noSpawnStartDistance;
 
   world.obstacleTimer += dt;
   if (!inNoSpawnZone && world.obstacleTimer >= world.nextSpawn) {
@@ -646,28 +710,35 @@ function update(dt) {
     if (s.x + s.r * 2 < -10) s.x = W + 100 + Math.random() * 220;
   }
 
-  if (checkCollision()) {
-    world.running = false;
-    const score = Math.floor(world.distance);
-    commitRunRecords();
-    finalScoreEl.textContent = `Score: ${score}`;
-    overlay.classList.remove("hidden");
+  const collisionFenceIndex = getCollisionFenceIndex();
+  if (collisionFenceIndex !== -1) {
+    if (world.shieldCharges > 0) {
+      world.shieldCharges -= 1;
+      fences.splice(collisionFenceIndex, 1);
+    } else {
+      world.running = false;
+      const score = Math.floor(world.distance);
+      commitRunRecords();
+      finalScoreEl.textContent = `Score: ${score}`;
+      overlay.classList.remove("hidden");
+    }
   }
 }
 
-function checkCollision() {
+function getCollisionFenceIndex() {
   const hb = getHorseHitbox();
 
-  for (const f of fences) {
+  for (let i = 0; i < fences.length; i += 1) {
+    const f = fences[i];
     const fb = {
       x: f.x + 6,
       y: f.y + 10,
       w: Math.max(10, f.w - 12),
       h: Math.max(12, f.h - 16),
     };
-    if (rectOverlap(hb, fb)) return true;
+    if (rectOverlap(hb, fb)) return i;
   }
-  return false;
+  return -1;
 }
 
 function getHorseHitbox() {
@@ -981,6 +1052,15 @@ function drawScore() {
   ctx.fillStyle = "#245478";
   ctx.fillText(`Speed: ${speedShown}`, W - 20, 54);
   ctx.fillText(`Coins: ${world.coins}`, W - 20, 74);
+  if (world.shieldCharges > 0) {
+    ctx.fillText(`Shield: ${world.shieldCharges}`, W - 20, 94);
+  }
+  if (world.secondJumpPurchased) {
+    const readyText = world.secondJumpCooldown <= 0
+      ? "Ready"
+      : `${world.secondJumpCooldown.toFixed(1)}s`;
+    ctx.fillText(`2nd Jump: ${readyText}`, W - 20, world.shieldCharges > 0 ? 114 : 94);
+  }
 }
 
 function px(x, y, w, h, color) {
@@ -1043,6 +1123,8 @@ recordBtn.addEventListener("click", openRecordPopup);
 closeRecordBtn.addEventListener("click", closeRecordPopup);
 continueBtn.addEventListener("click", continueFromShop);
 extraCoinsBtn.addEventListener("click", buyExtraCoins);
+shieldBtn.addEventListener("click", buyShield);
+secondJumpBtn.addEventListener("click", buySecondJump);
 inGameMenuBtn.addEventListener("click", returnToMainMenu);
 completionMainMenuBtn.addEventListener("click", returnToMainMenu);
 profilePrevBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex - 1));
@@ -1050,6 +1132,7 @@ profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.act
 if (editProfileNameBtn) editProfileNameBtn.addEventListener("click", editActiveProfileName);
 if (saveProfileNameBtn) saveProfileNameBtn.addEventListener("click", saveActiveProfileName);
 if (cancelProfileNameBtn) cancelProfileNameBtn.addEventListener("click", closeProfileNameEditor);
+if (closeProfileSwitcherBtn) closeProfileSwitcherBtn.addEventListener("click", closeProfileSwitcher);
 if (profileNameInput) {
   profileNameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
