@@ -313,12 +313,36 @@ function normalizeUnlockedLevel(value) {
 
 function loadLevelProgress() {
   let parsed = {};
+  let hadStoredProgress = false;
   try {
     const raw = localStorage.getItem(PROFILE_LEVEL_PROGRESS_KEY);
+    hadStoredProgress = !!raw;
     const stored = raw ? JSON.parse(raw) : {};
     parsed = stored && typeof stored === "object" ? stored : {};
   } catch {
     parsed = {};
+  }
+
+  // Migration for older saves: if progress key is missing but profile records exist,
+  // treat those played legacy profiles as fully unlocked.
+  if (!hadStoredProgress) {
+    const recordStore = getStoredProfileRecords();
+    for (let i = 0; i < PROFILE_SLOT_COUNT; i += 1) {
+      const profileId = String(i);
+      let record = normalizeRecords(recordStore[profileId] || {});
+      if (i === 0 && record.hurdles === 0 && record.timeSec === 0 && record.deaths === 0) {
+        try {
+          const legacyRaw = localStorage.getItem(LEGACY_RECORDS_KEY);
+          if (legacyRaw) record = normalizeRecords(JSON.parse(legacyRaw));
+        } catch {
+          // Ignore legacy parse failures.
+        }
+      }
+      const hasLegacyPlay = record.hurdles > 0 || record.timeSec > 0 || record.deaths > 0;
+      profileLevelProgress[profileId] = hasLegacyPlay ? LEVELS.length - 1 : 0;
+    }
+    saveLevelProgress();
+    return;
   }
 
   for (let i = 0; i < PROFILE_SLOT_COUNT; i += 1) {
