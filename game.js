@@ -114,9 +114,9 @@ let sessionTimeSec = 0;
 
 const horse = {
   x: 180,
-  y: GROUND_Y - 80,
-  w: 112,
-  h: 80,
+  y: GROUND_Y - 68,
+  w: 96,
+  h: 68,
   vy: 0,
   gravity: 1850,
   jumpPower: 710,
