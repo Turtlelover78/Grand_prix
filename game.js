@@ -66,6 +66,7 @@ const SECOND_JUMP_COOLDOWN = 2.6;
 const COIN_SPAWN_CHANCE = 0.32;
 const LEVEL_END_CLEAR_ZONE = 320;
 const LEVEL_END_NO_SPAWN_BUFFER = 420;
+const CROSS_COUNTRY_GRASS_SCROLL = 0.38;
 const LEVEL_START_FENCE_X = 800;
 const LEVELS = [
   { name: "Easy", length: 6500 },
@@ -186,11 +187,18 @@ function makeTrees() {
 }
 
 function makeFlowers() {
-  return Array.from({ length: 34 }, (_, i) => ({
-    x: i * 80 + 10,
-    yOffset: (i % 4) * 3,
-    speedScale: 0.8 + (i % 3) * 0.08,
-    tone: i % 3 === 0 ? "#f4d94e" : i % 3 === 1 ? "#f48cb0" : "#8be36d",
+  return Array.from({ length: 68 }, (_, i) => ({
+    x: i * 42 + 10,
+    yOffset: (i % 5) * 3,
+    tone: i % 5 === 0
+      ? "#f48cb0"
+      : i % 5 === 1
+        ? "#c77dff"
+        : i % 5 === 2
+          ? "#ff8ad9"
+          : i % 5 === 3
+            ? "#9b6dff"
+            : "#f4d94e",
   }));
 }
 
@@ -585,18 +593,23 @@ function spawnFence(startX = W + 40, forceCoin = false) {
   const level = world.levelIndex;
   const isCrossCountry = level === 1;
   const isIndoor = level === 2;
-  const obstacleKind = isCrossCountry ? "bush" : isIndoor ? "haybale" : "fence";
+  let obstacleKind = "fence";
+  if (isCrossCountry) obstacleKind = "bush";
+  if (isIndoor) obstacleKind = Math.random() < 0.42 ? "woodjump" : "haybale";
   const baseByLevel = [40, 44, 48][level] || 48;
   const rangeByLevel = [12, 16, 18][level] || 18;
   const progressiveLift = Math.floor(world.levelProgress * (7 + level * 2));
   const h = clamp(baseByLevel + progressiveLift + randInt(0, rangeByLevel), 36, 84);
-  const minW = isCrossCountry ? 34 : isIndoor ? 36 : 22;
-  const maxW = isCrossCountry ? 56 : isIndoor ? 56 : 32;
+  const minW = obstacleKind === "bush" ? 34 : obstacleKind === "haybale" ? 36 : obstacleKind === "woodjump" ? 30 : 22;
+  const maxW = obstacleKind === "bush" ? 56 : obstacleKind === "haybale" ? 56 : obstacleKind === "woodjump" ? 46 : 32;
   const w = randInt(minW, maxW);
-  const rails = obstacleKind === "fence" ? 2 + level + (world.levelProgress > 0.75 ? 1 : 0) : 0;
+  const rails = (obstacleKind === "fence" || obstacleKind === "woodjump")
+    ? 2 + level + (world.levelProgress > 0.75 ? 1 : 0)
+    : 0;
   const coinActive = forceCoin || Math.random() < COIN_SPAWN_CHANCE;
-  const coinOffsetBase = obstacleKind === "fence" ? 42 : obstacleKind === "bush" ? 34 : 38;
+  const coinOffsetBase = obstacleKind === "fence" || obstacleKind === "woodjump" ? 42 : obstacleKind === "bush" ? 34 : 38;
   const coinOffsetY = coinOffsetBase + randInt(0, 18);
+  const hasBerries = obstacleKind === "bush" && Math.random() < 0.55;
   world.levelFenceCount += 1;
   if (coinActive) world.levelCoinCount += 1;
   fences.push({
@@ -605,6 +618,7 @@ function spawnFence(startX = W + 40, forceCoin = false) {
     w,
     h,
     kind: obstacleKind,
+    hasBerries,
     rails,
     passed: false,
     coinActive,
@@ -756,7 +770,7 @@ function update(dt) {
   }
 
   for (const fl of flowers) {
-    fl.x -= world.speed * fl.speedScale * dt;
+    fl.x -= world.speed * CROSS_COUNTRY_GRASS_SCROLL * dt;
     if (fl.x < -20) fl.x = W + 80 + Math.random() * 240;
   }
 
@@ -798,6 +812,14 @@ function getObstacleHitbox(f) {
       y: f.y + 6,
       w: Math.max(16, f.w - 8),
       h: Math.max(14, f.h - 8),
+    };
+  }
+  if (f.kind === "woodjump") {
+    return {
+      x: f.x + 4,
+      y: f.y + 8,
+      w: Math.max(14, f.w - 8),
+      h: Math.max(14, f.h - 12),
     };
   }
   if (f.kind === "haybale") {
@@ -938,11 +960,22 @@ function drawCrossCountryTrees() {
 }
 
 function drawCrossCountryFlowers() {
-  for (const fl of flowers) {
+  for (let i = 0; i < flowers.length; i += 1) {
+    const fl = flowers[i];
     const x = Math.floor(fl.x);
-    const y = GROUND_Y - 18 + fl.yOffset;
-    px(x, y, 2, 10, "#4f933f");
-    px(x - 2, y - 4, 6, 4, fl.tone);
+
+    // Foreground flowers near the path.
+    const yNear = GROUND_Y - 18 + fl.yOffset;
+    px(x, yNear, 2, 10, "#4f933f");
+    px(x - 3, yNear - 5, 8, 5, fl.tone);
+    px(x - 1, yNear - 4, 4, 3, "#ffe9b5");
+
+    // Background flower strip between trees and course.
+    if (i % 2 === 0) {
+      const yBack = 292 + (i % 3) * 2;
+      px(x, yBack, 2, 7, "#5ea44b");
+      px(x - 2, yBack - 3, 6, 4, fl.tone);
+    }
   }
 }
 
@@ -986,6 +1019,8 @@ function drawIndoorBackground() {
 }
 
 function drawIndoorDecor() {
+  drawIndoorBleachers();
+
   for (const light of arenaLights) {
     const x = Math.floor(light.x);
     const y = Math.floor(light.y);
@@ -1002,6 +1037,30 @@ function drawIndoorDecor() {
     px(x + 6, 142, 30, 14, "#ae4646");
     px(x + 6, 158, 30, 14, "#f4e2ac");
     px(x + 6, 174, 30, 14, "#4373ad");
+  }
+}
+
+function drawIndoorBleachers() {
+  const baseY = 286;
+  for (const bl of bleachers) {
+    const x = Math.floor(bl.x);
+    const y = baseY - bl.h;
+
+    // Wooden bleacher tiers.
+    px(x + 4, y + bl.h - 8, bl.w - 8, 6, "#7b5b3e");
+    px(x + 12, y + bl.h - 18, bl.w - 24, 5, "#8d6a47");
+    px(x + 20, y + bl.h - 28, bl.w - 40, 5, "#9f7a54");
+
+    // Crowd hints.
+    for (let i = 0; i < bl.w - 30; i += 12) {
+      const tone = (i / 12) % 3 === 0 ? "#cc4f4f" : (i / 12) % 3 === 1 ? "#f0e0aa" : "#5b83c8";
+      px(x + 15 + i, y + bl.h - 36 - ((i / 12) % 2) * 2, 6, 6, tone);
+    }
+
+    // Support beams.
+    for (let i = 0; i < bl.w; i += 24) {
+      px(x + i, y + bl.h - 2, 4, 14, "#5e432d");
+    }
   }
 }
 
@@ -1087,6 +1146,10 @@ function drawObstacle(f) {
     drawBushObstacle(f);
     return;
   }
+  if (f.kind === "woodjump") {
+    drawWoodJumpObstacle(f);
+    return;
+  }
   if (f.kind === "haybale") {
     drawHaybaleObstacle(f);
     return;
@@ -1122,6 +1185,30 @@ function drawBushObstacle(f) {
   px(x + 2, y + 8, Math.floor(f.w * 0.34), 16, "#61c97c");
   px(x + Math.floor(f.w * 0.28), y + 2, Math.floor(f.w * 0.4), 18, "#73dd91");
   px(x + Math.floor(f.w * 0.62), y + 8, Math.floor(f.w * 0.3), 16, "#59c272");
+  if (f.hasBerries) {
+    const berryBaseY = y + 12;
+    px(x + 7, berryBaseY, 4, 4, "#b52a44");
+    px(x + Math.floor(f.w * 0.45), berryBaseY + 4, 4, 4, "#a82566");
+    px(x + Math.floor(f.w * 0.72), berryBaseY - 2, 4, 4, "#c33b2d");
+  }
+}
+
+function drawWoodJumpObstacle(f) {
+  const x = Math.floor(f.x);
+  const y = Math.floor(f.y);
+
+  px(x + 2, y, f.w - 4, f.h, "#9a7148");
+  px(x + 4, y + 2, f.w - 8, f.h - 4, "#b08358");
+
+  const gap = Math.max(10, Math.floor(f.h / (f.rails + 1)));
+  for (let i = 1; i <= f.rails; i += 1) {
+    const railY = y + i * gap;
+    px(x - 16, railY, f.w + 32, 5, i % 2 ? "#c99d63" : "#8f673e");
+    px(x - 16, railY + 5, f.w + 32, 2, "#6e4f2e");
+  }
+
+  px(x - 6, y + f.h - 10, 6, 10, "#6e4f2e");
+  px(x + f.w, y + f.h - 10, 6, 10, "#6e4f2e");
 }
 
 function drawHaybaleObstacle(f) {
