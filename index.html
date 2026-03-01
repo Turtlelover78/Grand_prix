@@ -16,6 +16,14 @@
         <div class="menu-scene" aria-label="Main menu">
           <button id="recordBtn" class="menu-sign menu-sign-record" type="button">Record</button>
           <button id="playBtn" class="menu-sign menu-sign-play" type="button">Play</button>
+          <div class="profile-switcher" aria-label="Profile selector">
+            <p class="profile-label">Profile</p>
+            <div class="profile-controls">
+              <button id="profilePrevBtn" class="profile-btn" type="button" aria-label="Previous profile">◀</button>
+              <strong id="activeProfileName" class="profile-name">Profile 1</strong>
+              <button id="profileNextBtn" class="profile-btn" type="button" aria-label="Next profile">▶</button>
+            </div>
+          </div>
         </div>
       </div>
       <div id="recordPopup" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
@@ -45,6 +53,14 @@
           <h2>Round Over</h2>
           <p id="finalScore" class="score-line">Score: 0</p>
           <button id="restartBtn" type="button">Restart</button>
+        </div>
+      </div>
+      <div id="completionOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-live="polite">
+        <div class="panel completion-panel">
+          <h2>Congratulations!</h2>
+          <p class="score-line">You finished the game!</p>
+          <p class="shop-note completion-note">This is a WIP so I will update it with more things. Please check back!</p>
+          <button id="completionMainMenuBtn" type="button">Main Menu</button>
         </div>
       </div>
     </div>

@@ -20,12 +20,20 @@ const inGameMenuBtn = document.getElementById("inGameMenuBtn");
 const recordHurdlesEl = document.getElementById("recordHurdles");
 const recordTimeEl = document.getElementById("recordTime");
 const recordDeathsEl = document.getElementById("recordDeaths");
+const completionOverlay = document.getElementById("completionOverlay");
+const completionMainMenuBtn = document.getElementById("completionMainMenuBtn");
+const profilePrevBtn = document.getElementById("profilePrevBtn");
+const profileNextBtn = document.getElementById("profileNextBtn");
+const activeProfileNameEl = document.getElementById("activeProfileName");
 
 const W = canvas.width;
 const H = canvas.height;
 const GROUND_Y = 402;
 const PIX = 4;
-const RECORDS_KEY = "grandPrixRecords";
+const LEGACY_RECORDS_KEY = "grandPrixRecords";
+const PROFILE_RECORDS_KEY = "grandPrixRecordsByProfile";
+const ACTIVE_PROFILE_KEY = "grandPrixActiveProfile";
+const PROFILE_NAMES = ["Profile 1", "Profile 2", "Profile 3"];
 const START_SPEED = 245;
 const COIN_VALUE = 2;
 const UPGRADED_COIN_VALUE = 3;
@@ -45,6 +53,9 @@ const LEVEL_TUNING = [
   { speedMin: 405, speedMax: 455, accelMin: 7.0, accelMax: 8.0, spawnMin: 0.84, spawnMax: 0.72 },
 ];
 const LEVEL_TOTAL_DISTANCE = LEVELS.reduce((sum, level) => sum + level.length, 0);
+const profileState = {
+  activeIndex: 0,
+};
 
 const world = {
   distance: 0,
@@ -165,6 +176,7 @@ function resetGame() {
   fences.length = 0;
   overlay.classList.add("hidden");
   shopOverlay.classList.add("hidden");
+  completionOverlay.classList.add("hidden");
 }
 
 function startGame() {
@@ -176,25 +188,73 @@ function startGame() {
 }
 
 function getRecords() {
+  const store = getStoredProfileRecords();
+  const profileId = String(profileState.activeIndex);
+  if (store[profileId]) return normalizeRecords(store[profileId]);
+  if (profileState.activeIndex === 0) {
+    try {
+      const raw = localStorage.getItem(LEGACY_RECORDS_KEY);
+      if (raw) return normalizeRecords(JSON.parse(raw));
+    } catch {
+      // Ignore bad legacy records.
+    }
+  }
+  return normalizeRecords({});
+}
+
+function getStoredProfileRecords() {
   try {
-    const raw = localStorage.getItem(RECORDS_KEY);
+    const raw = localStorage.getItem(PROFILE_RECORDS_KEY);
     const parsed = raw ? JSON.parse(raw) : {};
-    return {
-      hurdles: Number.isFinite(parsed.hurdles) ? Math.max(0, parsed.hurdles) : 0,
-      timeSec: Number.isFinite(parsed.timeSec) ? Math.max(0, parsed.timeSec) : 0,
-      deaths: Number.isFinite(parsed.deaths) ? Math.max(0, parsed.deaths) : 0,
-    };
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
-    return { hurdles: 0, timeSec: 0, deaths: 0 };
+    return {};
   }
 }
 
 function saveRecords(records) {
+  const store = getStoredProfileRecords();
+  store[String(profileState.activeIndex)] = normalizeRecords(records);
   try {
-    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+    localStorage.setItem(PROFILE_RECORDS_KEY, JSON.stringify(store));
+    if (profileState.activeIndex === 0) localStorage.removeItem(LEGACY_RECORDS_KEY);
   } catch {
     // Ignore storage failures.
   }
+}
+
+function normalizeRecords(parsed) {
+  return {
+    hurdles: Number.isFinite(parsed?.hurdles) ? Math.max(0, parsed.hurdles) : 0,
+    timeSec: Number.isFinite(parsed?.timeSec) ? Math.max(0, parsed.timeSec) : 0,
+    deaths: Number.isFinite(parsed?.deaths) ? Math.max(0, parsed.deaths) : 0,
+  };
+}
+
+function loadActiveProfile() {
+  try {
+    const raw = Number.parseInt(localStorage.getItem(ACTIVE_PROFILE_KEY) || "0", 10);
+    if (Number.isNaN(raw)) return 0;
+    return clamp(raw, 0, PROFILE_NAMES.length - 1);
+  } catch {
+    return 0;
+  }
+}
+
+function renderActiveProfile() {
+  activeProfileNameEl.textContent = PROFILE_NAMES[profileState.activeIndex];
+}
+
+function setActiveProfile(index) {
+  const count = PROFILE_NAMES.length;
+  profileState.activeIndex = ((index % count) + count) % count;
+  try {
+    localStorage.setItem(ACTIVE_PROFILE_KEY, String(profileState.activeIndex));
+  } catch {
+    // Ignore storage failures.
+  }
+  renderActiveProfile();
+  renderRecords();
 }
 
 function formatDuration(totalSeconds) {
@@ -271,6 +331,16 @@ function continueFromShop() {
   setupLevelStart(nextIndex);
   shopOverlay.classList.add("hidden");
   world.running = true;
+}
+
+function openCompletionMessage() {
+  world.running = false;
+  world.pendingLevelIndex = null;
+  world.obstacleTimer = 0;
+  fences.length = 0;
+  shopOverlay.classList.add("hidden");
+  overlay.classList.add("hidden");
+  completionOverlay.classList.remove("hidden");
 }
 
 function updateShopUi() {
@@ -415,12 +485,17 @@ function update(dt) {
   const runoutStartDistance = activeLevelEnd - LEVEL_END_CLEAR_ZONE;
   const noSpawnStartDistance = runoutStartDistance - LEVEL_END_NO_SPAWN_BUFFER;
   world.distance += world.speed * dt;
-  if (hasNextLevel && world.distance >= activeLevelEnd) {
+  if (world.distance >= activeLevelEnd) {
     world.distance = activeLevelEnd;
     world.levelName = LEVELS[activeLevelIndex].name;
     world.levelProgress = 1;
     world.totalProgress = clamp(world.distance / LEVEL_TOTAL_DISTANCE, 0, 1);
-    openShopAfterLevel(LEVELS[activeLevelIndex].name, activeLevelIndex + 1);
+    if (hasNextLevel) {
+      openShopAfterLevel(LEVELS[activeLevelIndex].name, activeLevelIndex + 1);
+    } else {
+      world.difficulty = 1;
+      openCompletionMessage();
+    }
     return;
   }
   const levelState = getLevelState(world.distance);
@@ -902,10 +977,15 @@ closeRecordBtn.addEventListener("click", closeRecordPopup);
 continueBtn.addEventListener("click", continueFromShop);
 extraCoinsBtn.addEventListener("click", buyExtraCoins);
 inGameMenuBtn.addEventListener("click", returnToMainMenu);
+completionMainMenuBtn.addEventListener("click", returnToMainMenu);
+profilePrevBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex - 1));
+profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex + 1));
 recordPopup.addEventListener("click", (e) => {
   if (e.target === recordPopup) closeRecordPopup();
 });
 
+profileState.activeIndex = loadActiveProfile();
+renderActiveProfile();
 resetGame();
 renderRecords();
 requestAnimationFrame(loop);

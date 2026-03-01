@@ -200,6 +200,49 @@ button:active {
   outline-offset: 2px;
 }
 
+.profile-switcher {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(22px, 6vw, 44px);
+  transform: translateX(-50%);
+  min-width: min(440px, 86vw);
+  padding: 10px 14px 12px;
+  text-align: center;
+  border: 3px solid #5e3d1f;
+  border-radius: 10px;
+  background: #f4e2bfeb;
+  box-shadow: 0 8px 0 #6f4b29;
+}
+
+.profile-label {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #3b2814;
+}
+
+.profile-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.profile-name {
+  min-width: 160px;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  color: #2a1a0b;
+}
+
+.profile-btn {
+  min-width: 48px;
+  padding: 5px 10px;
+  border: 2px solid #5e3d1f;
+  border-radius: 7px;
+  color: #2f1f0e;
+  background: linear-gradient(180deg, #f6e3b7, #deb179);
+}
+
 .record-card {
   width: min(760px, 90vw);
   min-height: min(430px, 76vh);
@@ -284,6 +327,14 @@ button:active {
   cursor: not-allowed;
 }
 
+.completion-panel {
+  width: min(560px, 88vw);
+}
+
+.completion-note {
+  margin: 0 0 16px;
+}
+
 @media (max-width: 900px) {
   .menu-sign-record {
     left: 16.2%;
@@ -297,5 +348,14 @@ button:active {
     top: 43.2%;
     min-width: min(220px, 38vw);
     transform: translate(-50%, -50%);
+  }
+
+  .profile-switcher {
+    min-width: min(360px, 92vw);
+    padding: 8px 10px 10px;
+  }
+
+  .profile-name {
+    min-width: 130px;
   }
 }
