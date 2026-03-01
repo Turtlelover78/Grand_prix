@@ -25,6 +25,7 @@ const completionMainMenuBtn = document.getElementById("completionMainMenuBtn");
 const profilePrevBtn = document.getElementById("profilePrevBtn");
 const profileNextBtn = document.getElementById("profileNextBtn");
 const activeProfileNameEl = document.getElementById("activeProfileName");
+const editProfileNameBtn = document.getElementById("editProfileNameBtn");
 
 const W = canvas.width;
 const H = canvas.height;
@@ -33,7 +34,9 @@ const PIX = 4;
 const LEGACY_RECORDS_KEY = "grandPrixRecords";
 const PROFILE_RECORDS_KEY = "grandPrixRecordsByProfile";
 const ACTIVE_PROFILE_KEY = "grandPrixActiveProfile";
-const PROFILE_NAMES = ["Profile 1", "Profile 2", "Profile 3"];
+const PROFILE_NAMES_KEY = "grandPrixProfileNames";
+const DEFAULT_PROFILE_NAMES = ["Profile 1", "Profile 2", "Profile 3"];
+const PROFILE_SLOT_COUNT = DEFAULT_PROFILE_NAMES.length;
 const START_SPEED = 245;
 const COIN_VALUE = 2;
 const UPGRADED_COIN_VALUE = 3;
@@ -55,6 +58,7 @@ const LEVEL_TUNING = [
 const LEVEL_TOTAL_DISTANCE = LEVELS.reduce((sum, level) => sum + level.length, 0);
 const profileState = {
   activeIndex: 0,
+  names: [...DEFAULT_PROFILE_NAMES],
 };
 
 const world = {
@@ -231,22 +235,46 @@ function normalizeRecords(parsed) {
   };
 }
 
+function normalizeProfileName(name, fallback) {
+  const cleaned = String(name || "").replace(/\s+/g, " ").trim().slice(0, 18);
+  return cleaned || fallback;
+}
+
+function loadProfileNames() {
+  try {
+    const raw = localStorage.getItem(PROFILE_NAMES_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    const loaded = Array.isArray(parsed) ? parsed : [];
+    return DEFAULT_PROFILE_NAMES.map((fallback, i) => normalizeProfileName(loaded[i], fallback));
+  } catch {
+    return [...DEFAULT_PROFILE_NAMES];
+  }
+}
+
+function saveProfileNames(names) {
+  try {
+    localStorage.setItem(PROFILE_NAMES_KEY, JSON.stringify(names));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function loadActiveProfile() {
   try {
     const raw = Number.parseInt(localStorage.getItem(ACTIVE_PROFILE_KEY) || "0", 10);
     if (Number.isNaN(raw)) return 0;
-    return clamp(raw, 0, PROFILE_NAMES.length - 1);
+    return clamp(raw, 0, PROFILE_SLOT_COUNT - 1);
   } catch {
     return 0;
   }
 }
 
 function renderActiveProfile() {
-  activeProfileNameEl.textContent = PROFILE_NAMES[profileState.activeIndex];
+  activeProfileNameEl.textContent = profileState.names[profileState.activeIndex];
 }
 
 function setActiveProfile(index) {
-  const count = PROFILE_NAMES.length;
+  const count = PROFILE_SLOT_COUNT;
   profileState.activeIndex = ((index % count) + count) % count;
   try {
     localStorage.setItem(ACTIVE_PROFILE_KEY, String(profileState.activeIndex));
@@ -255,6 +283,16 @@ function setActiveProfile(index) {
   }
   renderActiveProfile();
   renderRecords();
+}
+
+function editActiveProfileName() {
+  const i = profileState.activeIndex;
+  const currentName = profileState.names[i];
+  const entered = window.prompt("Enter profile name (max 18 characters):", currentName);
+  if (entered == null) return;
+  profileState.names[i] = normalizeProfileName(entered, DEFAULT_PROFILE_NAMES[i]);
+  saveProfileNames(profileState.names);
+  renderActiveProfile();
 }
 
 function formatDuration(totalSeconds) {
@@ -980,10 +1018,12 @@ inGameMenuBtn.addEventListener("click", returnToMainMenu);
 completionMainMenuBtn.addEventListener("click", returnToMainMenu);
 profilePrevBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex - 1));
 profileNextBtn.addEventListener("click", () => setActiveProfile(profileState.activeIndex + 1));
+editProfileNameBtn.addEventListener("click", editActiveProfileName);
 recordPopup.addEventListener("click", (e) => {
   if (e.target === recordPopup) closeRecordPopup();
 });
 
+profileState.names = loadProfileNames();
 profileState.activeIndex = loadActiveProfile();
 renderActiveProfile();
 resetGame();
