@@ -28,7 +28,7 @@ const PIX = 4;
 const RECORDS_KEY = "grandPrixRecords";
 const START_SPEED = 245;
 const COIN_VALUE = 2;
-const EXTRA_COIN_BONUS = 3;
+const UPGRADED_COIN_VALUE = 3;
 const EXTRA_COINS_COST = 10;
 const COIN_SPAWN_CHANCE = 0.24;
 const LEVEL_END_CLEAR_ZONE = 450;
@@ -243,7 +243,7 @@ function setupLevelStart(levelIndex) {
   world.maxSpeed = levelState.speedCap;
   world.accel = levelState.accel;
   world.spawnBase = levelState.spawnBase;
-  world.nextSpawn = clamp(levelState.spawnBase * 0.7, 0.45, 1.2);
+  world.nextSpawn = clamp(levelState.spawnBase * 0.7 * getSpeedSpawnMultiplier(), 0.45, 1.7);
   world.obstacleTimer = 0;
   fences.length = 0;
   world.levelCoinCount = 0;
@@ -379,6 +379,20 @@ function spawnFence(startX = W + 40, forceCoin = false) {
   });
 }
 
+function getSpeedSpawnMultiplier() {
+  // Increase time between hurdles as speed climbs.
+  const bonus = clamp((world.speed - START_SPEED) / 210, 0, 0.55);
+  return 1 + bonus;
+}
+
+function getNextSpawnTime() {
+  const levelDensityBonus = world.levelIndex * 0.1;
+  const base = world.spawnBase - world.levelProgress * 0.05 - levelDensityBonus;
+  const randomSpread = Math.max(0.16, 0.32 - world.levelIndex * 0.06);
+  const raw = base + Math.random() * randomSpread;
+  return clamp(raw * getSpeedSpawnMultiplier(), 0.52, 2.05);
+}
+
 function jump() {
   if (!world.running) return;
   if (horse.grounded) {
@@ -437,10 +451,7 @@ function update(dt) {
   if (!inNoSpawnZone && world.obstacleTimer >= world.nextSpawn) {
     world.obstacleTimer = 0;
     spawnFence();
-    const levelDensityBonus = world.levelIndex * 0.1;
-    const base = world.spawnBase - world.levelProgress * 0.05 - levelDensityBonus;
-    const randomSpread = Math.max(0.16, 0.32 - world.levelIndex * 0.06);
-    world.nextSpawn = clamp(base + Math.random() * randomSpread, 0.52, 1.35);
+    world.nextSpawn = getNextSpawnTime();
   }
 
   const hb = getHorseHitbox();
@@ -457,7 +468,7 @@ function update(dt) {
       };
       if (rectOverlap(hb, coinHitbox)) {
         f.coinActive = false;
-        world.coins += COIN_VALUE + (world.extraCoinsPurchased ? EXTRA_COIN_BONUS : 0);
+        world.coins += world.extraCoinsPurchased ? UPGRADED_COIN_VALUE : COIN_VALUE;
       }
     }
 
