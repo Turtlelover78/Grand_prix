@@ -69,8 +69,8 @@ const LEVEL_END_NO_SPAWN_BUFFER = 420;
 const LEVEL_START_FENCE_X = 800;
 const LEVELS = [
   { name: "Easy", length: 6500 },
-  { name: "Medium", length: 6500 },
-  { name: "Hard", length: 6500 },
+  { name: "Cross Country", length: 6500 },
+  { name: "Indoor Arena", length: 6500 },
 ];
 const LEVEL_TUNING = [
   { speedMin: 300, speedMax: 340, accelMin: 4.6, accelMax: 5.6, spawnMin: 1.22, spawnMax: 1.04 },
@@ -139,6 +139,9 @@ const clouds = makeClouds();
 const bleachers = makeBleachers();
 const banners = makeBanners();
 const shrubs = makeShrubs();
+const trees = makeTrees();
+const flowers = makeFlowers();
+const arenaLights = makeArenaLights();
 
 function makeClouds() {
   return Array.from({ length: 7 }, (_, i) => ({
@@ -170,6 +173,32 @@ function makeShrubs() {
     x: i * 230 + 30,
     r: 20 + (i % 3) * 8,
     tone: i % 2 ? "#6eb973" : "#5aa960",
+  }));
+}
+
+function makeTrees() {
+  return Array.from({ length: 9 }, (_, i) => ({
+    x: i * 220 + 60,
+    trunkH: 28 + (i % 3) * 8,
+    crownW: 52 + (i % 3) * 10,
+    crownH: 34 + (i % 2) * 10,
+  }));
+}
+
+function makeFlowers() {
+  return Array.from({ length: 34 }, (_, i) => ({
+    x: i * 80 + 10,
+    yOffset: (i % 4) * 3,
+    speedScale: 0.8 + (i % 3) * 0.08,
+    tone: i % 3 === 0 ? "#f4d94e" : i % 3 === 1 ? "#f48cb0" : "#8be36d",
+  }));
+}
+
+function makeArenaLights() {
+  return Array.from({ length: 9 }, (_, i) => ({
+    x: i * 170 + 30,
+    y: 50 + (i % 2) * 14,
+    w: 52 + (i % 3) * 10,
   }));
 }
 
@@ -553,14 +582,21 @@ function getLevelState(distance) {
 }
 
 function spawnFence(startX = W + 40, forceCoin = false) {
-  const baseByLevel = [40, 46, 52][world.levelIndex] || 52;
-  const rangeByLevel = [12, 14, 16][world.levelIndex] || 16;
-  const progressiveLift = Math.floor(world.levelProgress * (8 + world.levelIndex * 2));
-  const h = clamp(baseByLevel + progressiveLift + randInt(0, rangeByLevel), 38, 82);
-  const w = 22 + randInt(0, 10);
-  const rails = 2 + world.levelIndex + (world.levelProgress > 0.75 ? 1 : 0);
+  const level = world.levelIndex;
+  const isCrossCountry = level === 1;
+  const isIndoor = level === 2;
+  const obstacleKind = isCrossCountry ? "bush" : isIndoor ? "haybale" : "fence";
+  const baseByLevel = [40, 44, 48][level] || 48;
+  const rangeByLevel = [12, 16, 18][level] || 18;
+  const progressiveLift = Math.floor(world.levelProgress * (7 + level * 2));
+  const h = clamp(baseByLevel + progressiveLift + randInt(0, rangeByLevel), 36, 84);
+  const minW = isCrossCountry ? 34 : isIndoor ? 36 : 22;
+  const maxW = isCrossCountry ? 56 : isIndoor ? 56 : 32;
+  const w = randInt(minW, maxW);
+  const rails = obstacleKind === "fence" ? 2 + level + (world.levelProgress > 0.75 ? 1 : 0) : 0;
   const coinActive = forceCoin || Math.random() < COIN_SPAWN_CHANCE;
-  const coinOffsetY = 42 + randInt(0, 20);
+  const coinOffsetBase = obstacleKind === "fence" ? 42 : obstacleKind === "bush" ? 34 : 38;
+  const coinOffsetY = coinOffsetBase + randInt(0, 18);
   world.levelFenceCount += 1;
   if (coinActive) world.levelCoinCount += 1;
   fences.push({
@@ -568,6 +604,7 @@ function spawnFence(startX = W + 40, forceCoin = false) {
     y: GROUND_Y - h,
     w,
     h,
+    kind: obstacleKind,
     rails,
     passed: false,
     coinActive,
@@ -713,6 +750,21 @@ function update(dt) {
     if (s.x + s.r * 2 < -10) s.x = W + 100 + Math.random() * 220;
   }
 
+  for (const t of trees) {
+    t.x -= world.speed * 0.45 * dt;
+    if (t.x + t.crownW < -40) t.x = W + 100 + Math.random() * 260;
+  }
+
+  for (const fl of flowers) {
+    fl.x -= world.speed * fl.speedScale * dt;
+    if (fl.x < -20) fl.x = W + 80 + Math.random() * 240;
+  }
+
+  for (const light of arenaLights) {
+    light.x -= world.speed * 0.18 * dt;
+    if (light.x + light.w < -30) light.x = W + 120 + Math.random() * 200;
+  }
+
   const collisionFenceIndex = getCollisionFenceIndex();
   if (collisionFenceIndex !== -1) {
     if (world.shieldCharges > 0) {
@@ -733,15 +785,35 @@ function getCollisionFenceIndex() {
 
   for (let i = 0; i < fences.length; i += 1) {
     const f = fences[i];
-    const fb = {
-      x: f.x + 6,
-      y: f.y + 10,
-      w: Math.max(10, f.w - 12),
-      h: Math.max(12, f.h - 16),
-    };
+    const fb = getObstacleHitbox(f);
     if (rectOverlap(hb, fb)) return i;
   }
   return -1;
+}
+
+function getObstacleHitbox(f) {
+  if (f.kind === "bush") {
+    return {
+      x: f.x + 4,
+      y: f.y + 6,
+      w: Math.max(16, f.w - 8),
+      h: Math.max(14, f.h - 8),
+    };
+  }
+  if (f.kind === "haybale") {
+    return {
+      x: f.x + 3,
+      y: f.y + 5,
+      w: Math.max(16, f.w - 6),
+      h: Math.max(16, f.h - 7),
+    };
+  }
+  return {
+    x: f.x + 6,
+    y: f.y + 10,
+    w: Math.max(10, f.w - 12),
+    h: Math.max(12, f.h - 16),
+  };
 }
 
 function getHorseHitbox() {
@@ -758,16 +830,27 @@ function rectOverlap(a, b) {
 }
 
 function draw() {
-  drawArenaBackground();
-  drawClouds();
-  drawBleachers();
-  drawStands();
-  drawShrubs();
-  drawGround();
+  if (world.levelIndex === 1) {
+    drawCrossCountryBackground();
+    drawClouds();
+    drawCrossCountryDecor();
+    drawCrossCountryGround();
+  } else if (world.levelIndex === 2) {
+    drawIndoorBackground();
+    drawIndoorDecor();
+    drawIndoorGround();
+  } else {
+    drawArenaBackground();
+    drawClouds();
+    drawBleachers();
+    drawStands();
+    drawShrubs();
+    drawGround();
+  }
   drawProgressBar();
 
   for (const f of fences) {
-    drawFence(f);
+    drawObstacle(f);
     drawFenceCoin(f);
   }
 
@@ -813,6 +896,127 @@ function drawArenaBackground() {
   ctx.fillStyle = "#6c8f6f";
   for (let i = 0; i < W; i += 18) {
     ctx.fillRect(i, 318 + ((i / 18) % 3), 14, 2);
+  }
+}
+
+function drawCrossCountryBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#8fc9ff");
+  sky.addColorStop(0.52, "#dff4ff");
+  sky.addColorStop(0.53, "#a8d99b");
+  sky.addColorStop(1, "#79b26b");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  const hillOffset = (world.distance * 0.08) % 220;
+  for (let i = -1; i < 8; i += 1) {
+    const x = i * 220 - hillOffset;
+    px(x, 232, 180, 34, "#78ad6c");
+    px(x + 20, 208, 140, 26, "#85bb78");
+    px(x + 40, 188, 100, 20, "#97cb89");
+  }
+
+  px(0, 284, W, 48, "#8fcd78");
+}
+
+function drawCrossCountryDecor() {
+  drawCrossCountryTrees();
+  drawCrossCountryFlowers();
+}
+
+function drawCrossCountryTrees() {
+  for (const t of trees) {
+    const x = Math.floor(t.x);
+    const trunkY = 312 - t.trunkH;
+    const crownTop = trunkY - t.crownH;
+
+    px(x + Math.floor(t.crownW / 2) - 5, trunkY, 10, t.trunkH, "#6d4b30");
+    px(x, crownTop + 12, t.crownW, t.crownH, "#2f8a44");
+    px(x + 8, crownTop + 4, t.crownW - 16, t.crownH - 6, "#43a85a");
+    px(x + 14, crownTop - 6, t.crownW - 28, 12, "#67ca7d");
+  }
+}
+
+function drawCrossCountryFlowers() {
+  for (const fl of flowers) {
+    const x = Math.floor(fl.x);
+    const y = GROUND_Y - 18 + fl.yOffset;
+    px(x, y, 2, 10, "#4f933f");
+    px(x - 2, y - 4, 6, 4, fl.tone);
+  }
+}
+
+function drawCrossCountryGround() {
+  px(0, GROUND_Y - 22, W, 24, "#74b964");
+  px(0, GROUND_Y, W, H - GROUND_Y, "#8d653d");
+
+  for (let i = 0; i < W; i += 22) {
+    const wav = Math.sin((i + world.distance * 0.38) * 0.04) * 2;
+    px(i, GROUND_Y + 11 + wav, 14, 3, "#b38553");
+  }
+
+  for (let i = 8; i < W; i += 30) {
+    const y = GROUND_Y + 34 + ((i / 30) % 2) * 8;
+    px(i, y, 10, 2, "#9f7447");
+  }
+
+  px(0, GROUND_Y - 2, W, 2, "#dcb47e");
+}
+
+function drawIndoorBackground() {
+  const wall = ctx.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, "#475267");
+  wall.addColorStop(0.4, "#657289");
+  wall.addColorStop(0.41, "#3f495e");
+  wall.addColorStop(1, "#625542");
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < W; i += 64) {
+    px(i, 54, 48, 10, "#2f3748");
+  }
+
+  for (let i = 0; i < W; i += 14) {
+    const tone = (i / 14) % 2 ? "#2f384a" : "#415069";
+    px(i, 248, 10, 18, tone);
+  }
+
+  px(0, 272, W, 8, "#d8deea");
+  px(0, 280, W, 6, "#7f8ba2");
+}
+
+function drawIndoorDecor() {
+  for (const light of arenaLights) {
+    const x = Math.floor(light.x);
+    const y = Math.floor(light.y);
+    px(x, y, light.w, 8, "#edf2ff");
+    px(x + 4, y + 8, light.w - 8, 4, "#c7d1e6");
+    px(x + Math.floor(light.w / 2) - 8, y + 12, 16, 14, "#fff0af");
+    ctx.fillStyle = "#fff0af33";
+    ctx.fillRect(x + Math.floor(light.w / 2) - 14, y + 24, 28, 120);
+  }
+
+  for (const b of banners) {
+    const x = Math.floor(b.x);
+    px(x, 130, 6, 136, "#2d3443");
+    px(x + 6, 142, 30, 14, "#ae4646");
+    px(x + 6, 158, 30, 14, "#f4e2ac");
+    px(x + 6, 174, 30, 14, "#4373ad");
+  }
+}
+
+function drawIndoorGround() {
+  px(0, GROUND_Y - 4, W, 4, "#f2dcb5");
+  px(0, GROUND_Y, W, H - GROUND_Y, "#c9a06a");
+
+  for (let i = 0; i < W; i += 26) {
+    const wav = Math.sin((i + world.distance * 0.28) * 0.03) * 1.4;
+    px(i, GROUND_Y + 10 + wav, 14, 2, "#b88f5c");
+  }
+
+  for (let i = 6; i < W; i += 18) {
+    const y = GROUND_Y + 28 + ((i / 18) % 3) * 6;
+    px(i, y, 8, 2, "#a37a4b");
   }
 }
 
@@ -878,6 +1082,18 @@ function drawGround() {
   px(0, GROUND_Y - 2, W, 2, "#e5bd84");
 }
 
+function drawObstacle(f) {
+  if (f.kind === "bush") {
+    drawBushObstacle(f);
+    return;
+  }
+  if (f.kind === "haybale") {
+    drawHaybaleObstacle(f);
+    return;
+  }
+  drawFence(f);
+}
+
 function drawFence(f) {
   const x = Math.floor(f.x);
   const topY = f.y;
@@ -894,6 +1110,35 @@ function drawFence(f) {
 
   px(x - 8, topY + f.h - 8, 8, 8, "#226296");
   px(x + f.w, topY + f.h - 8, 8, 8, "#226296");
+}
+
+function drawBushObstacle(f) {
+  const x = Math.floor(f.x);
+  const y = Math.floor(f.y);
+
+  px(x + 2, y + f.h - 10, f.w - 4, 10, "#2f6f2e");
+  px(x, y + 12, f.w, f.h - 14, "#2f9247");
+  px(x + 4, y + 6, f.w - 8, f.h - 20, "#46af60");
+  px(x + 2, y + 8, Math.floor(f.w * 0.34), 16, "#61c97c");
+  px(x + Math.floor(f.w * 0.28), y + 2, Math.floor(f.w * 0.4), 18, "#73dd91");
+  px(x + Math.floor(f.w * 0.62), y + 8, Math.floor(f.w * 0.3), 16, "#59c272");
+}
+
+function drawHaybaleObstacle(f) {
+  const x = Math.floor(f.x);
+  const y = Math.floor(f.y);
+
+  px(x, y, f.w, f.h, "#d5ae5b");
+  px(x + 2, y + 2, f.w - 4, f.h - 4, "#e3c576");
+  px(x + 2, y + 6, f.w - 4, 3, "#c79d4c");
+  for (let row = 14; row < f.h; row += 12) {
+    px(x + 2, y + row, f.w - 4, 2, "#b78b41");
+  }
+
+  const bandA = x + Math.floor(f.w * 0.33);
+  const bandB = x + Math.floor(f.w * 0.66);
+  px(bandA, y + 2, 2, f.h - 4, "#8b6934");
+  px(bandB, y + 2, 2, f.h - 4, "#8b6934");
 }
 
 function drawFenceCoin(f) {
